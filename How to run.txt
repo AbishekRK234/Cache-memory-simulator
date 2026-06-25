@@ -1,0 +1,6 @@
+1. Open terminal
+2. cd (Folder Path)
+3. python -m venv myenv (do only If my venv is not present in folder)
+4. myenv\Scripts\activate
+5. pip install flask
+6. python app.py

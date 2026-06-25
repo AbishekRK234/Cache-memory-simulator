@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cache Memory Simulator — COA Project</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #F0F4F8;
+    --sidebar-bg: #DDE6F0;
+    --accent: #1565C0;
+    --accent-hover: #0D47A1;
+    --hit: #4CAF50;
+    --miss: #F44336;
+    --card-bg: #ffffff;
+    --text: #1a1a2e;
+    --text-muted: #64748b;
+    --border: #c8d6e5;
+    --radius: 10px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, var(--accent) 0%, #0D47A1 100%);
+    color: #fff;
+    padding: 14px 28px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 12px rgba(21,101,192,.25);
+    position: relative;
+    z-index: 10;
+  }
+  .header svg { flex-shrink: 0; opacity: .85; }
+
+  /* ── Layout ── */
+  .app-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 264px;
+    min-width: 264px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    padding: 20px 18px 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .sidebar h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    color: var(--accent);
+    margin: 12px 0 6px;
+    font-weight: 700;
+  }
+  .sidebar h3:first-child { margin-top: 0; }
+
+  .sb-label {
+    font-size: 12.5px;
+    font-weight: 500;
+    margin: 6px 0 3px;
+    color: var(--text);
+  }
+
+  .sb-radio-group { display: flex; flex-direction: column; gap: 3px; padding-left: 4px; }
+  .sb-radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 3px 0;
+  }
+  .sb-radio-group input[type="radio"] { accent-color: var(--accent); }
+
+  .sb-input, .sb-select {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    background: #fff;
+    color: var(--text);
+    transition: border-color .2s;
+  }
+  .sb-input:focus, .sb-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(21,101,192,.12);
+  }
+  .sb-input:disabled, .sb-select:disabled {
+    background: #e8ecf0;
+    color: #999;
+    cursor: not-allowed;
+  }
+
+  .sb-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 10px 0;
+  }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    width: 100%;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(21,101,192,.3); }
+  .btn-secondary {
+    background: #fff;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: #f1f5f9; }
+
+  /* ── Content Area ── */
+  .content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Tabs ── */
+  .tabs-bar {
+    display: flex;
+    gap: 0;
+    background: #e4ebf2;
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+  }
+  .tab-btn {
+    padding: 12px 22px;
+    border: none;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2.5px solid transparent;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--text); background: rgba(255,255,255,.5); }
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    background: var(--bg);
+    font-weight: 700;
+  }
+
+  .tab-panel {
+    display: none;
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+  }
+  .tab-panel.active { display: flex; flex-direction: column; gap: 16px; }
+
+  /* ── Metric Cards ── */
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+  }
+  .metric-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 14px 12px;
+    text-align: center;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  }
+  .metric-card .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .metric-card .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  /* ── Charts ── */
+  .chart-area {
+    display: flex;
+    gap: 16px;
+    flex: 1;
+    min-height: 0;
+  }
+  .chart-box {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  }
+  .chart-box h4 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 340px;
+  }
+  .chart-wrap canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* ── Access Log Table ── */
+  .log-box {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    min-width: 340px;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  }
+  .log-box h4 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    padding: 14px 16px 8px;
+  }
+  .log-table-wrap {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 8px 8px;
+  }
+  table.log-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .log-table th {
+    position: sticky;
+    top: 0;
+    background: var(--card-bg);
+    text-align: center;
+    padding: 6px 4px;
+    font-weight: 600;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--text-muted);
+    border-bottom: 2px solid var(--border);
+  }
+  .log-table td {
+    text-align: center;
+    padding: 5px 4px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .log-table tr.hit { background: #e8f5e9; }
+  .log-table tr.miss { background: #ffebee; }
+  .log-table .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .5px;
+  }
+  .badge-hit  { background: var(--hit); color: #fff; }
+  .badge-miss { background: var(--miss); color: #fff; }
+
+  /* ── Tab description bar ── */
+  .tab-desc {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 12px 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  }
+  .tab-desc p { font-size: 13px; color: var(--text-muted); }
+
+  .full-chart-box {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  }
+  .full-chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 420px;
+  }
+  .full-chart-wrap canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .chart-row {
+    display: flex;
+    gap: 14px;
+    flex: 1;
+    min-height: 0;
+  }
+  .chart-row .chart-box .chart-wrap { height: 320px; }
+
+  /* ── Spinner ── */
+  .spinner {
+    display: none;
+    width: 18px; height: 18px;
+    border: 2.5px solid rgba(255,255,255,.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .metrics-row { grid-template-columns: repeat(3, 1fr); }
+    .chart-area { flex-direction: column; }
+    .log-box { max-width: 100%; min-width: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+  Design and Performance Analysis of Cache Memory in a Computer System
+</div>
+
+<div class="app-body">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <h3>Cache Configuration</h3>
+
+    <div class="sb-label">Cache Type</div>
+    <div class="sb-radio-group">
+      <label><input type="radio" name="cacheType" value="Direct Mapped" checked onchange="onTypeChange()"> Direct Mapped</label>
+      <label><input type="radio" name="cacheType" value="Set Associative" onchange="onTypeChange()"> Set Associative</label>
+      <label><input type="radio" name="cacheType" value="Fully Associative" onchange="onTypeChange()"> Fully Associative</label>
+    </div>
+
+    <hr class="sb-divider">
+
+    <div class="sb-label">Cache Size (bytes)</div>
+    <input class="sb-input" type="number" id="cacheSize" value="512" min="1">
+
+    <div class="sb-label">Block Size (bytes)</div>
+    <input class="sb-input" type="number" id="blockSize" value="16" min="1">
+
+    <div class="sb-label">Ways</div>
+    <input class="sb-input" type="number" id="ways" value="4" min="1" disabled>
+
+    <div class="sb-label">Replacement Policy</div>
+    <select class="sb-select" id="policy" disabled>
+      <option>LRU</option>
+      <option>FIFO</option>
+      <option>Random</option>
+    </select>
+
+    <div class="sb-label">Address Bits</div>
+    <input class="sb-input" type="number" id="addrBits" value="16" min="4">
+
+    <hr class="sb-divider">
+    <h3>Workload</h3>
+
+    <div class="sb-label">Workload Type</div>
+    <select class="sb-select" id="workload">
+      <option value="loop">loop</option>
+      <option value="sequential">sequential</option>
+      <option value="random">random</option>
+      <option value="temporal_locality">temporal_locality</option>
+      <option value="strided">strided</option>
+      <option value="mixed">mixed</option>
+    </select>
+
+    <div class="sb-label"># Accesses</div>
+    <input class="sb-input" type="number" id="nAccesses" value="200" min="1">
+
+    <hr class="sb-divider">
+
+    <button class="btn btn-primary" id="runBtn" onclick="runSimulation()">
+      <span>▶ Run Simulation</span>
+      <div class="spinner" id="runSpinner"></div>
+    </button>
+    <button class="btn btn-secondary" onclick="clearResults()">Clear Results</button>
+  </aside>
+
+  <!-- Content -->
+  <main class="content">
+    <div class="tabs-bar">
+      <button class="tab-btn active" onclick="switchTab(0, this)">Simulation</button>
+      <button class="tab-btn" onclick="switchTab(1, this)">Cache Comparison</button>
+      <button class="tab-btn" onclick="switchTab(2, this)">Replacement Policy</button>
+      <button class="tab-btn" onclick="switchTab(3, this)">Workload Analysis</button>
+    </div>
+
+    <!-- Tab 0: Simulation -->
+    <div class="tab-panel active" id="tab0">
+      <div id="configInfo" style="font-size:12px; color:var(--text-muted); font-family:'JetBrains Mono',monospace; background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:8px 14px; box-shadow:0 1px 4px rgba(0,0,0,.04);">Run a simulation to see configuration details.</div>
+      <div class="metrics-row">
+        <div class="metric-card"><div class="label">Accesses</div><div class="value" id="mAccesses">—</div></div>
+        <div class="metric-card"><div class="label">Hits</div><div class="value" id="mHits">—</div></div>
+        <div class="metric-card"><div class="label">Misses</div><div class="value" id="mMisses">—</div></div>
+        <div class="metric-card"><div class="label">Hit Rate</div><div class="value" id="mHitRate">—</div></div>
+        <div class="metric-card"><div class="label">Miss Rate</div><div class="value" id="mMissRate">—</div></div>
+        <div class="metric-card"><div class="label">AMAT</div><div class="value" id="mAMAT">—</div></div>
+      </div>
+      <div class="chart-area">
+        <div class="chart-box" style="flex:1.4;">
+          <h4>Access Pattern</h4>
+          <div class="chart-wrap" style="height:380px;"><canvas id="chartPattern"></canvas></div>
+        </div>
+        <div class="log-box">
+          <h4>Access Log (first 50)</h4>
+          <div class="log-table-wrap">
+            <table class="log-table">
+              <thead><tr><th>Address</th><th>Tag</th><th>Index</th><th>Offset</th><th>Result</th></tr></thead>
+              <tbody id="logBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 1: Cache Comparison -->
+    <div class="tab-panel" id="tab1">
+      <div class="tab-desc">
+        <p>Compares Direct Mapped / 2-Way / 4-Way / Fully Associative on the selected workload.</p>
+        <button class="btn btn-primary" style="width:auto;" onclick="runComparison()">▶ Run Comparison</button>
+      </div>
+      <div class="chart-row">
+        <div class="chart-box"><h4>Hit Rate (%)</h4><div class="chart-wrap"><canvas id="chartCmpHit"></canvas></div></div>
+        <div class="chart-box"><h4>Miss Rate (%)</h4><div class="chart-wrap"><canvas id="chartCmpMiss"></canvas></div></div>
+        <div class="chart-box"><h4>AMAT (cycles)</h4><div class="chart-wrap"><canvas id="chartCmpAMAT"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Replacement Policy -->
+    <div class="tab-panel" id="tab2">
+      <div class="tab-desc">
+        <p>Compares LRU / FIFO / Random on a 4-Way Set Associative Cache.</p>
+        <button class="btn btn-primary" style="width:auto;" onclick="runPolicyComparison()">▶ Run Policy Comparison</button>
+      </div>
+      <div class="chart-row">
+        <div class="chart-box"><h4>Hit Rate (%)</h4><div class="chart-wrap"><canvas id="chartPolHit"></canvas></div></div>
+        <div class="chart-box"><h4>AMAT (cycles)</h4><div class="chart-wrap"><canvas id="chartPolAMAT"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Workload Analysis -->
+    <div class="tab-panel" id="tab3">
+      <div class="tab-desc">
+        <p>Hit rate for every cache type across all workload patterns.</p>
+        <button class="btn btn-primary" style="width:auto;" onclick="runWorkloadAnalysis()">▶ Run Workload Analysis</button>
+      </div>
+      <div class="full-chart-box">
+        <div class="full-chart-wrap"><canvas id="chartWorkload"></canvas></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── Globals ──
+Chart.register(ChartDataLabels);
+// Disable datalabels globally — enable per-chart
+Chart.defaults.plugins.datalabels = { display: false };
+
+const COLORS = ['#2196F3','#4CAF50','#FF5722','#9C27B0','#FF9800','#00BCD4'];
+const POLICY_COLORS = ['#3F51B5','#E91E63','#FF9800'];
+let charts = {};  // store Chart.js instances for cleanup
+
+// ── Sidebar Logic ──
+function onTypeChange() {
+  const ct = document.querySelector('input[name="cacheType"]:checked').value;
+  const waysInput = document.getElementById('ways');
+  const policyInput = document.getElementById('policy');
+
+  if (ct === 'Direct Mapped') {
+    waysInput.disabled = true;
+    waysInput.value = '1';
+    policyInput.disabled = true;
+  } else if (ct === 'Set Associative') {
+    waysInput.disabled = false;
+    if (waysInput.value === '-') waysInput.value = '4';
+    policyInput.disabled = false;
+  } else {
+    // Fully Associative: ways = cache_size / block_size (auto-computed)
+    const cs = parseInt(document.getElementById('cacheSize').value) || 512;
+    const bs = parseInt(document.getElementById('blockSize').value) || 16;
+    waysInput.value = Math.floor(cs / bs);
+    waysInput.disabled = true;
+    policyInput.disabled = false;
+  }
+}
+
+// Re-compute ways when cache/block size changes and Fully Associative is selected
+document.getElementById('cacheSize').addEventListener('input', () => {
+  if (document.querySelector('input[name="cacheType"]:checked').value === 'Fully Associative') onTypeChange();
+});
+document.getElementById('blockSize').addEventListener('input', () => {
+  if (document.querySelector('input[name="cacheType"]:checked').value === 'Fully Associative') onTypeChange();
+});
+
+function getParams() {
+  return {
+    cache_type: document.querySelector('input[name="cacheType"]:checked').value,
+    cache_size: document.getElementById('cacheSize').value,
+    block_size: document.getElementById('blockSize').value,
+    ways: document.getElementById('ways').value,
+    policy: document.getElementById('policy').value,
+    addr_bits: document.getElementById('addrBits').value,
+    workload: document.getElementById('workload').value,
+    n_accesses: document.getElementById('nAccesses').value,
+  };
+}
+
+// ── Tab Switching ──
+function switchTab(idx, btn) {
+  document.querySelectorAll('.tab-panel').forEach((p,i) => p.classList.toggle('active', i===idx));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── API Helpers ──
+async function post(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+
+function destroyChart(key) {
+  if (charts[key]) { charts[key].destroy(); delete charts[key]; }
+}
+
+// ── Tab 0: Simulation ──
+async function runSimulation() {
+  const spinner = document.getElementById('runSpinner');
+  spinner.style.display = 'block';
+  try {
+    const data = await post('/api/simulate', getParams());
+    const s = data.stats;
+    const cfg = data.config;
+
+    document.getElementById('mAccesses').textContent = s.accesses;
+    document.getElementById('mHits').textContent = s.hits;
+    document.getElementById('mMisses').textContent = s.misses;
+    document.getElementById('mHitRate').textContent = (s.hit_rate * 100).toFixed(1) + '%';
+    document.getElementById('mMissRate').textContent = (s.miss_rate * 100).toFixed(1) + '%';
+    document.getElementById('mAMAT').textContent = s.amat.toFixed(2);
+
+    // Update config display
+    const cfgEl = document.getElementById('configInfo');
+    if (cfgEl) {
+      cfgEl.textContent = `${cfg.type} | ${cfg.cache_size} cache, ${cfg.block_size} blocks` +
+        (cfg.ways ? `, ${cfg.ways} ways` : '') +
+        (cfg.num_sets !== undefined ? `, ${cfg.num_sets} set(s)` : '') +
+        (cfg.policy ? `, ${cfg.policy}` : '');
+    }
+
+    // Access log table
+    const tbody = document.getElementById('logBody');
+    tbody.innerHTML = '';
+    data.access_log.forEach(e => {
+      const cls = e.result === 'HIT' ? 'hit' : 'miss';
+      const badge = e.result === 'HIT' ? 'badge-hit' : 'badge-miss';
+      tbody.innerHTML += `<tr class="${cls}">
+        <td>${e.address}</td><td>${e.tag}</td><td>${e.index}</td><td>${e.offset}</td>
+        <td><span class="badge ${badge}">${e.result}</span></td></tr>`;
+    });
+
+    drawAccessPattern(data.access_log);
+    switchTab(0, document.querySelectorAll('.tab-btn')[0]);
+  } catch(err) { alert('Error: ' + err.message); }
+  spinner.style.display = 'none';
+}
+
+function drawAccessPattern(log) {
+  destroyChart('pattern');
+  const hits = log.map(e => e.result === 'HIT' ? 1 : 0);
+  const n = hits.length;
+  const barColors = hits.map(h => h ? '#4CAF50' : '#F44336');
+
+  // Cumulative hit rate
+  let cumHits = 0;
+  const cumRate = hits.map((h, i) => { cumHits += h; return (cumHits / (i + 1)) * 100; });
+
+  const ctx = document.getElementById('chartPattern').getContext('2d');
+  charts['pattern'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: Array.from({length: n}, (_, i) => i),
+      datasets: [
+        {
+          label: 'HIT/MISS',
+          data: hits,
+          backgroundColor: barColors,
+          borderWidth: 0,
+          barPercentage: 1.0,
+          categoryPercentage: 1.0,
+          yAxisID: 'y',
+          order: 2,
+        },
+        {
+          label: 'Cumulative Hit Rate',
+          data: cumRate,
+          type: 'line',
+          borderColor: '#2196F3',
+          backgroundColor: 'rgba(33,150,243,0.08)',
+          fill: true,
+          pointRadius: 0,
+          borderWidth: 2,
+          yAxisID: 'y1',
+          order: 1,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              if (ctx.datasetIndex === 0) return ctx.raw === 1 ? 'HIT' : 'MISS';
+              return 'Hit Rate: ' + ctx.raw.toFixed(1) + '%';
+            }
+          }
+        }
+      },
+      scales: {
+        x: { display: true, title: { display: true, text: 'Access #', font: { size: 11 } },
+             ticks: { maxTicksLimit: 20, font: { size: 9 } } },
+        y: { position: 'left', min: -0.1, max: 1.4,
+             title: { display: true, text: 'HIT(1)/MISS(0)', font: { size: 10 } },
+             ticks: { stepSize: 1, font: { size: 9 } } },
+        y1: { position: 'right', min: 0, max: 105,
+              title: { display: true, text: 'Hit Rate (%)', font: { size: 10 } },
+              ticks: { font: { size: 9 } },
+              grid: { drawOnChartArea: false } },
+      }
+    }
+  });
+}
+
+function clearResults() {
+  ['mAccesses','mHits','mMisses','mHitRate','mMissRate','mAMAT'].forEach(id => {
+    document.getElementById(id).textContent = '—';
+  });
+  document.getElementById('logBody').innerHTML = '';
+  destroyChart('pattern');
+}
+
+// ── Tab 1: Cache Comparison ──
+async function runComparison() {
+  try {
+    const data = await post('/api/compare', getParams());
+    const results = data.results;
+    const names = results.map(r => r.name);
+
+    function drawBar(canvasId, chartKey, values, label, suffix = '') {
+      destroyChart(chartKey);
+      const ctx = document.getElementById(canvasId).getContext('2d');
+      charts[chartKey] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: names,
+          datasets: [{
+            data: values,
+            backgroundColor: COLORS.slice(0, names.length),
+            borderColor: '#333',
+            borderWidth: 0.5,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: c => c.raw.toFixed(1) + suffix } },
+            datalabels: {
+              display: true,
+              anchor: 'end',
+              align: 'top',
+              font: { size: 11, weight: 'bold' },
+              color: '#333',
+              formatter: v => v.toFixed(1) + suffix,
+            }
+          },
+          scales: {
+            x: { ticks: { font: { size: 10 }, maxRotation: 20 } },
+            y: { beginAtZero: true, title: { display: true, text: label, font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    drawBar('chartCmpHit', 'cmpHit', results.map(r => r.hit_rate * 100), 'Hit Rate (%)', '%');
+    drawBar('chartCmpMiss', 'cmpMiss', results.map(r => r.miss_rate * 100), 'Miss Rate (%)', '%');
+    drawBar('chartCmpAMAT', 'cmpAMAT', results.map(r => r.amat), 'AMAT (cycles)');
+
+    switchTab(1, document.querySelectorAll('.tab-btn')[1]);
+  } catch(err) { alert('Error: ' + err.message); }
+}
+
+// ── Tab 2: Policy Comparison ──
+async function runPolicyComparison() {
+  try {
+    const data = await post('/api/policy', getParams());
+    const policies = ['LRU', 'FIFO', 'Random'];
+
+    function drawBar(canvasId, chartKey, values, label, suffix = '') {
+      destroyChart(chartKey);
+      const ctx = document.getElementById(canvasId).getContext('2d');
+      charts[chartKey] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: policies,
+          datasets: [{
+            data: values,
+            backgroundColor: POLICY_COLORS,
+            borderColor: '#333',
+            borderWidth: 0.5,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: c => c.raw.toFixed(1) + suffix } },
+            datalabels: {
+              display: true,
+              anchor: 'end',
+              align: 'top',
+              font: { size: 12, weight: 'bold' },
+              color: '#333',
+              formatter: v => v.toFixed(1) + suffix,
+            }
+          },
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: label, font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    drawBar('chartPolHit', 'polHit', policies.map(p => data.results[p].hit_rate * 100), 'Hit Rate (%)', '%');
+    drawBar('chartPolAMAT', 'polAMAT', policies.map(p => data.results[p].amat), 'AMAT (cycles)');
+
+    switchTab(2, document.querySelectorAll('.tab-btn')[2]);
+  } catch(err) { alert('Error: ' + err.message); }
+}
+
+// ── Tab 3: Workload Analysis ──
+async function runWorkloadAnalysis() {
+  try {
+    const data = await post('/api/workload', getParams());
+    const workloads = ['sequential', 'random', 'temporal_locality', 'loop', 'strided'];
+    const cacheNames = data.results[workloads[0]].map(r => r.name);
+
+    destroyChart('workload');
+    const ctx = document.getElementById('chartWorkload').getContext('2d');
+
+    const datasets = cacheNames.map((name, i) => ({
+      label: name,
+      data: workloads.map(wl => data.results[wl][i].hit_rate * 100),
+      backgroundColor: COLORS[i],
+      borderColor: '#333',
+      borderWidth: 0.5,
+    }));
+
+    charts['workload'] = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: workloads.map(w => w.replace('_', ' ')),
+        datasets,
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top', labels: { font: { size: 11 } } },
+          title: { display: true, text: 'Hit Rate vs Workload Type — All Cache Configurations',
+                   font: { size: 14, weight: 'bold' } },
+          tooltip: { callbacks: { label: c => c.dataset.label + ': ' + c.raw.toFixed(1) + '%' } },
+          datalabels: {
+            display: true,
+            anchor: 'end',
+            align: 'top',
+            font: { size: 9, weight: 'bold' },
+            color: '#333',
+            formatter: v => v.toFixed(1) + '%',
+          }
+        },
+        scales: {
+          x: { ticks: { font: { size: 11 } } },
+          y: { beginAtZero: true, max: 110,
+               title: { display: true, text: 'Hit Rate (%)', font: { size: 12 } } }
+        }
+      }
+    });
+
+    switchTab(3, document.querySelectorAll('.tab-btn')[3]);
+  } catch(err) { alert('Error: ' + err.message); }
+}
+
+// Init
+onTypeChange();
+</script>
+</body>
+</html>
